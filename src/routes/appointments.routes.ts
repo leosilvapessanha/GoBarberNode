@@ -16,7 +16,7 @@ appointmentsRouter.post('/', (request,response)=>{
 
   appointments.push(appointment)
 
-  return response.json({ message:"all good" })
+  return response.json( appointment )
 }
 
 )
