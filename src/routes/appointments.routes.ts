@@ -1,33 +1,40 @@
-import { Router } from 'express'
-import {  parseISO } from 'date-fns'
-import AppointmentsRepository from "../repositories/appointmentsRepository"
-import CreateAppointmentService from '../services/CreateAppointmentServices'
+import { Router } from 'express';
+import { getCustomRepository } from 'typeorm';
+import { parseISO } from 'date-fns';
 
-const appointmentsRouter = Router()
 
-const appointmentsRepository = new AppointmentsRepository()
+import AppointmentsRepository from '../repositories/AppointmentsRepository';
+import CreateAppointmentServices from '../services/CreateAppointmentServices';
 
-appointmentsRouter.get('/', (request, response) => {
-  const appointments = appointmentsRepository.all();
+import ensureAuthenticated from '../middlewares/ensureAuthenticated';
 
-  return response.json(appointments)
-})
+const appointmentsRouter = Router();
 
-appointmentsRouter.post('/', (request, response) => {
-  try {
-    const { provider, date } = request.body
+appointmentsRouter.use(ensureAuthenticated);
 
-    const ParseDate = parseISO(date)
 
-    const createAppointment = new CreateAppointmentService(appointmentsRepository)
+appointmentsRouter.get('/', async (request, response) => {
+  const appointmentsRepository = getCustomRepository(AppointmentsRepository);
 
-    const appointment = createAppointment.execute({date: ParseDate, provider: provider})
+  const appointments = await appointmentsRepository.find();
 
-    return response.json(appointment)
-  } catch (err) {
-    return response.status(400).json({error: err.message})
-  }
+  return response.json(appointments);
+});
 
-})
+appointmentsRouter.post('/', async (request, response) => {
 
-export default appointmentsRouter
+  const { provider_id, date } = request.body;
+
+  const parsedDate = parseISO(date);
+
+  const createAppointment = new CreateAppointmentServices();
+
+  const appointment = await createAppointment.execute({
+    date: parsedDate,
+    provider_id,
+  });
+
+  return response.json(appointment);
+});
+
+export default appointmentsRouter;

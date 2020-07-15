@@ -1,38 +1,39 @@
-import appointment from '../model/appointments'
-import Appointments from '../model/appointments'
-import AppointmentsRepository from '../repositories/appointmentsRepository'
-import { startOfHour } from 'date-fns'
+import { startOfHour } from 'date-fns';
+import { getCustomRepository } from 'typeorm';
 
+import AppError from '../errors/AppError';
 
-interface RequestDTO{
-  provider: string,
+import Appointment from '../models/Appointment';
+import AppointmentsRepository from '../repositories/AppointmentsRepository';
+
+interface Request {
+  provider_id: string;
   date: Date;
 }
 
 class CreateAppointmentService {
+  public async execute({ date, provider_id }: Request): Promise<Appointment> {
+    const appointmentsRepository = getCustomRepository(AppointmentsRepository);
 
-  private appointmentsRepository: AppointmentsRepository
+    const appointmentDate = startOfHour(date);
 
-  constructor(appointmentsRepository: AppointmentsRepository){
-    this.appointmentsRepository = appointmentsRepository
+    const findAppointmentInSameDate = await appointmentsRepository.findByDate(
+      appointmentDate,
+    );
 
-  }
-  public execute({date, provider}: RequestDTO): Appointments {
-    const appointmentDate = startOfHour(date)
-
-    const findAppointmenteInTheSameDay = this.appointmentsRepository.findByDate(appointmentDate)
-
-    if (findAppointmenteInTheSameDay) {
-      throw Error('already booked')
-      //return response.status(400).json({ message: "already booked" })
+    if (findAppointmentInSameDate) {
+      throw new AppError('This appointment is already booked');
     }
 
-    const appointment = this.appointmentsRepository.create({
-      provider,
-      date: appointmentDate
-    })
-    return appointment
+    const appointment = appointmentsRepository.create({
+      provider_id,
+      date: appointmentDate,
+    });
+
+    await appointmentsRepository.save(appointment);
+
+    return appointment;
   }
 }
 
-export default CreateAppointmentService
+export default CreateAppointmentService;
